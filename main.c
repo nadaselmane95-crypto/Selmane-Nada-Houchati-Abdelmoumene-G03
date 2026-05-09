@@ -13,13 +13,125 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+/* ── ANSI color macros ─────────────────────────────────────── */
+#define RESET       "\033[0m"
+#define BOLD        "\033[1m"
+
+/* Foreground */
+#define FG_BLACK    "\033[30m"
+#define FG_RED      "\033[91m"
+#define FG_GREEN    "\033[92m"
+#define FG_YELLOW   "\033[93m"
+#define FG_BLUE     "\033[94m"
+#define FG_MAGENTA  "\033[95m"
+#define FG_CYAN     "\033[96m"
+#define FG_WHITE    "\033[97m"
+
+/* Background */
+#define BG_BLACK    "\033[40m"
+#define BG_RED      "\033[41m"
+#define BG_GREEN    "\033[42m"
+#define BG_YELLOW   "\033[43m"
+#define BG_BLUE     "\033[44m"
+#define BG_MAGENTA  "\033[45m"
+#define BG_CYAN     "\033[46m"
+#define BG_WHITE    "\033[107m"
 
 // CONSTANT DEFINITONS: 
 #define MaxWord 64
 #define MaxLine BUFSIZ 
 #define MaxFileName 256
 #define MaxDocuments 10 
+// User Interface Helpers 
 
+void clearScreen() {
+#ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
+}
+
+void printLine(char sym, int len, const char *color) {
+    printf("%s%s", color, BOLD);
+    for (int i = 0; i < len; i++) putchar(sym);
+    printf("%s\n", RESET);
+}
+
+void printBanner() {
+    printf("\n");
+    printf(BOLD FG_CYAN
+        "   █████╗ ██████╗ ██████╗ ███████╗\n"
+        "  ██╔══██╗██╔══██╗██╔══██╗██╔════╝\n"
+        "  ███████║██║  ██║██║  ██║███████╗\n"
+        "  ██╔══██║██║  ██║██║  ██║╚════██║\n"
+        "  ██║  ██║██████╔╝██████╔╝███████║\n"
+        "  ╚═╝  ╚═╝╚═════╝ ╚═════╝ ╚══════╝\n"
+        RESET);
+    printf(BOLD FG_YELLOW "   Algorithmics & Dynamic Data Structures\n" RESET);
+    printf(BOLD FG_MAGENTA "   ✦  Linguistic Set Operations Lab  ✦\n" RESET);
+}
+
+void printSplash() {
+    clearScreen();
+    printLine('=', 55, FG_CYAN);
+    printBanner();
+    printLine('=', 55, FG_CYAN);
+    printf(BOLD BG_BLUE FG_WHITE
+        "   Operations: Union  |  Intersection  |  Difference   "
+        RESET "\n");
+    printLine('-', 55, FG_BLUE);
+    printf(FG_GREEN BOLD "   Paragraphs are stored in linked lists.\n"    RESET);
+    printf(FG_GREEN BOLD "   Results are displayed live in the console.\n" RESET);
+    printLine('=', 55, FG_CYAN);
+    printf("\n");
+}
+
+void printMenu() {
+    printLine('=', 55, FG_YELLOW);
+    printf(BOLD BG_YELLOW FG_BLACK
+        "                  *  MAIN  MENU  *                     "
+        RESET "\n");
+    printLine('=', 55, FG_YELLOW);
+    printf(BOLD FG_CYAN   "  [1]" RESET BOLD FG_WHITE "  Perform set operations within one document\n" RESET);
+    printf(BOLD FG_CYAN   "  [2]" RESET BOLD FG_WHITE "  Perform set operations across documents\n"    RESET);
+    printLine('-', 55, FG_BLUE);
+    printf(BOLD FG_RED    "  [3]" RESET BOLD FG_WHITE "  Exit\n" RESET);
+    printLine('=', 55, FG_YELLOW);
+    printf(BOLD FG_CYAN "  Your choice: " RESET);
+}
+
+void printSubMenu(int p1, int p2) {
+    printLine('-', 55, FG_MAGENTA);
+    printf(BOLD FG_MAGENTA "  Choose an operation:\n" RESET);
+    printf(BOLD FG_GREEN   "  [1]" RESET BOLD FG_WHITE "  Union          (P%d U P%d)\n" RESET, p1, p2);
+    printf(BOLD FG_BLUE    "  [2]" RESET BOLD FG_WHITE "  Intersection   (P%d n P%d)\n" RESET, p1, p2);
+    printf(BOLD FG_YELLOW  "  [3]" RESET BOLD FG_WHITE "  Difference     (P%d \\ P%d)\n" RESET, p1, p2);
+    printf(BOLD FG_CYAN    "  [4]" RESET BOLD FG_WHITE "  Is P%d a subset of P%d?\n"    RESET, p1, p2);
+    printLine('-', 55, FG_MAGENTA);
+    printf(BOLD FG_CYAN "  Your choice: " RESET);
+}
+
+void printResultHeader(const char *opName, const char *color) {
+    printf("\n");
+    printLine('*', 55, color);
+    printf("%s%s  Result -- %s%s\n", BOLD, color, opName, RESET);
+    printLine('*', 55, color);
+}
+
+void printSuccess(const char *msg) {
+    printf(BOLD BG_GREEN FG_BLACK "  OK  %s  " RESET "\n\n", msg);
+}
+
+void printError(const char *msg) {
+    printf(BOLD BG_RED FG_WHITE "  ERROR  %s  " RESET "\n\n", msg);
+}
+
+void pausePrompt() {
+    printf(BOLD FG_YELLOW "\n  Press [Enter] to return to menu..." RESET);
+    getchar();
+    while (getchar() != '\n');
+}
 
 //DATA STRUCTURE 
 // 1- WORD : ELEMENT IN A PARAGRAPH 
@@ -50,7 +162,7 @@ typedef struct DocumentCell {
 // Words ABSTRACT MACHINE 
 // CHECK IF THE WORD IS EXISTANT IN A SET 
 int ExistentWord(WordCell *head , const char *word) {
-    for (; head; head=head->NextWord);
+    for (; head; head=head->NextWord)
     if (strcmp(head->Word,word)==0) return 1;
     return 0;
 }
@@ -61,7 +173,7 @@ int InsertWord(WordCell **head, const char *word ) {
     // insert the word in the linked list 
     WordCell *newword= malloc(sizeof(WordCell));
     //copy the word we want to insert into the word field 
-    strcmp(newword->Word, word);
+    strcpy(newword->Word, word);
     // link it to the list 
     newword->NextWord = *head;
     *head = newword;
@@ -88,6 +200,7 @@ void PrintSet(WordCell *head) {
         if (++cpt % 10 == 0) {
             printf("\n");
         }
+        head = head->NextWord; 
     }
   if (cpt % 10 !=10 ){ printf("\n"); }
      
@@ -107,12 +220,12 @@ ParagraphCell *CreateParagraph(int id) {
 
 // 2 - Insert A Paragraph At the Queue: 
 void InsertParagraph(ParagraphCell **head , ParagraphCell *paragraph){
-if (*head = NULL) { 
+if (*head == NULL) { 
     *head= paragraph ;
     return; 
 }
 ParagraphCell *currentpara = *head; 
-while (currentpara!=NULL) { 
+while (currentpara->next != NULL) { 
     currentpara = currentpara->next;
 }
 currentpara->next = paragraph; 
@@ -181,10 +294,10 @@ void add_words(const char *line, ParagraphCell *para) {
 FILE LOADING : load a txt format file 
 ================================================================*/
 
-int load_document(DocumentCell *doc, const char *filename)
-{
+int load_document(DocumentCell *doc, const char *filename) {
+    strcpy(doc->filename, filename);
     FILE *fp = fopen(filename, "r");
-    char line[200];
+    char line[MaxLine];
 
     if (fp == NULL)
         return 0;
@@ -211,7 +324,6 @@ int load_document(DocumentCell *doc, const char *filename)
     return 1;
 }
 
-//SET OPERATIONS 
 //SET OPERATIONS 
 //1- Intersection of two sets of words
 WordCell *Intersection(WordCell *set1, WordCell *set2) {
@@ -292,11 +404,18 @@ void menu() {
     printf("2. Perform Set Operations Across Documents\n");
     printf("3. Exit\n");
 }
+
+/* ================================================================
+   MAIN
+   ================================================================ */
+
+
 int main() {
     DocumentCell docs[MaxDocuments];
     int numDocs = 0;
     char filename[MaxFileName];
 
+    printSplash(); 
     while (1) {
         menu();
         int choice;
