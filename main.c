@@ -95,8 +95,9 @@ void printMenu() {
     printLine('=', 55, FG_YELLOW);
     printf(BOLD FG_CYAN   "  [1]" RESET BOLD FG_WHITE "  Perform set operations within one document\n" RESET);
     printf(BOLD FG_CYAN   "  [2]" RESET BOLD FG_WHITE "  Perform set operations across documents\n"    RESET);
+    printf(BOLD FG_GREEN "  [3]" RESET BOLD FG_WHITE "  Load a document\n" RESET);
     printLine('-', 55, FG_BLUE);
-    printf(BOLD FG_RED    "  [3]" RESET BOLD FG_WHITE "  Exit\n" RESET);
+    printf(BOLD FG_RED    "  [4]" RESET BOLD FG_WHITE "  Exit\n" RESET);
     printLine('=', 55, FG_YELLOW);
     printf(BOLD FG_CYAN "  Your choice: " RESET);
 }
@@ -196,7 +197,7 @@ void PrintSet(WordCell *head) {
         return;
     }
     while (head != NULL) {
-        printf("%s", head->Word);
+        printf("%s ", head->Word);
         if (++cpt % 10 == 0) {
             printf("\n");
         }
@@ -385,7 +386,9 @@ void setopdoc(DocumentCell *docs, int numDocs) {
                     printf("Difference (Paragraph %d - Paragraph %d):\n", p1->paraName, p2->paraName);
                     PrintSet(difference);
                     printf("Difference (Paragraph %d - Paragraph %d):\n", p2->paraName, p1->paraName);
-                    PrintSet(Difference(p2->words, p1->words));
+                    WordCell *diff2 = Difference(p2->words, p1->words);
+                    PrintSet(diff2);
+                    DeleteSet(diff2);
                     printf("Is Paragraph %d a subset of Paragraph %d? %s\n", 
                            p1->paraName, p2->paraName, IsSubset(p1->words, p2->words) ? "Yes" : "No");
                     printf("Is Paragraph %d a subset of Paragraph %d? %s\n", 
@@ -415,42 +418,47 @@ int main() {
     int numDocs = 0;
     char filename[MaxFileName];
 
-    printSplash(); 
+    printSplash();   
+    
     while (1) {
-        menu();
+        clearScreen();                  
+        printMenu();
         int choice;
         scanf("%d", &choice);
         switch (choice) {
             case 1:{
                 // load the document
-                printf("Enter the filename to load: ");
+                printf(BOLD FG_WHITE "Enter the filename to load: " RESET);
                 scanf("%s", filename);
                 if (!load_document(&docs[numDocs], filename)) {
-                    printf("Failed to load document.\n");
+                    printError("Could not open file. Check the filename.");
+                    pausePrompt();
                     break;
                 }
-                printf("Document loaded successfully (%d paragraphs).\n", docs[numDocs].numberof_para);
+                printSuccess("Document loaded successfully \n");
+                printf(BOLD FG_YELLOW "  Paragraphs found: %d\n\n" RESET, docs[numDocs].numberof_para);
                 numDocs++;
 
                 // show paragraphs
                 printf("Paragraphs in document:\n");
                 ParagraphCell *cur = docs[numDocs-1].Paragraph;
                 while (cur != NULL) {
-                    printf("  Paragraph %d (%d words)\n", cur->paraName, cur->WordCount);
+                    printf(FG_CYAN BOLD "  Paragraph %d" RESET FG_WHITE  "(%d words)\n" RESET , cur->paraName, cur->WordCount);
                     cur = cur->next;
                 }
 
                 // pick two paragraphs
                 int p1idx, p2idx;
-                printf("Select first paragraph: ");
+                printf(BOLD FG_WHITE "Select first paragraph: " RESET);
                 scanf("%d", &p1idx);
-                printf("Select second paragraph: ");
+                printf(BOLD FG_WHITE "Select second paragraph: " RESET);
                 scanf("%d", &p2idx);
 
                 ParagraphCell *p1 = ExtractParagraph(docs[numDocs-1].Paragraph, p1idx);
                 ParagraphCell *p2 = ExtractParagraph(docs[numDocs-1].Paragraph, p2idx);
                 if (p1 == NULL || p2 == NULL) {
-                    printf("Invalid paragraph index.\n");
+                    printError("Invalid paragraph index.\n");
+                    pausePrompt();
                     break;
                 }
 
@@ -499,15 +507,30 @@ int main() {
             case 2:
                 if (numDocs < 2) {
                     printf("Please load at least two documents first.\n");
+                    pausePrompt();
                     break;
                 }
                 setopdoc(docs, numDocs);
                 break;
             case 3:
-                printf("Thanksfor using the program\n");
+                printf(BOLD FG_WHITE "Enter the filename to load: " RESET);
+                scanf("%s", filename);
+                if (!load_document(&docs[numDocs], filename)) {
+                    printError("Could not open file. Check the filename.");
+                    pausePrompt();
+                    break;
+                }
+                printSuccess("Document loaded successfully");
+                printf(BOLD FG_YELLOW "  Paragraphs found: %d\n\n" RESET, docs[numDocs].numberof_para);
+                numDocs++;
+                pausePrompt();
+                break;
+            case 4:                                      
+                printf("Thanks for using the program\n");
                 return 0;
-            default:
+                default:
                 printf("Invalid choice. Please try again.\n");
-        }
+                pausePrompt();
+            }
     }
 }
